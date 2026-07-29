@@ -10,6 +10,10 @@ This repo is public on GitHub at `siennatalles/personal-dashboard` and is
 linked from the user's GitHub profile README as a portfolio project — treat
 it as user-facing.
 
+- Always run `git pull origin main` before making any local edits or
+  commits. Other tools (e.g. Claude Cowork) may push directly to this repo
+  outside of Claude Code sessions, so local can silently fall behind — pull
+  first to avoid divergent-history conflicts.
 - After making changes, commit them with a clear message describing the
   change — don't leave edits sitting uncommitted.
 - Always ask for explicit confirmation before running `git push`. Never push
