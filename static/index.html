@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --ink: #1a1d23;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --accent: #4f46e5;
+    --urgent: #dc2626;
+    --warn: #d97706;
+    --ok: #059669;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 18px; }
+  h1 { font-size: 22px; margin: 0; }
+  .date { color: var(--muted); font-size: 14px; }
+  button.refresh {
+    border: 1px solid var(--border); background: var(--card); border-radius: 8px;
+    padding: 8px 14px; font-size: 13px; cursor: pointer; color: var(--ink);
+  }
+  button.refresh:hover { background: #f0f1f3; }
+
+  .header-right { display: flex; align-items: center; gap: 14px; }
+  .weather-chip {
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid var(--border); background: var(--card); border-radius: 999px;
+    padding: 6px 12px 6px 10px; font-size: 13px; color: var(--ink);
+  }
+  .weather-chip-select {
+    border: none; background: transparent; font-size: 12px; color: var(--muted);
+    font-family: inherit; cursor: pointer; padding: 0; max-width: 130px;
+  }
+  .weather-chip-select:focus { outline: none; }
+  .weather-chip .icon { font-size: 16px; line-height: 1; }
+  .weather-chip .temp { font-weight: 700; }
+  .weather-chip .range { color: var(--muted); font-size: 12px; }
+
+  .briefing {
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    color: white; border-radius: 14px; padding: 20px 22px; margin-bottom: 16px;
+    font-size: 16px; line-height: 1.5;
+  }
+  .briefing .label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; opacity: .8; margin-bottom: 6px; }
+
+  .timing {
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 16px; margin-bottom: 20px; font-size: 13px; color: var(--muted);
+  }
+  .timing b { color: var(--ink); }
+  .speedup {
+    background: #ecfdf5; color: var(--ok); border-radius: 999px; padding: 3px 10px;
+    font-weight: 600; font-size: 12px;
+  }
+
+  /* Named grid areas so Calendar can span two rows while To-Do and Canvas
+     each take exactly half that spanned height (equal 1fr rows) — Email
+     runs full-width underneath. */
+  .grid {
+    display: grid; gap: 16px;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr auto;
+    grid-template-areas:
+      "calendar todo"
+      "calendar canvas"
+      "email email";
+  }
+  .grid-calendar { grid-area: calendar; }
+  .grid-todo { grid-area: todo; display: flex; flex-direction: column; min-height: 0; }
+  .grid-canvas { grid-area: canvas; display: flex; flex-direction: column; min-height: 0; }
+  .grid-email { grid-area: email; }
+  @media (max-width: 760px) {
+    .grid {
+      grid-template-columns: 1fr; grid-template-rows: auto;
+      grid-template-areas: "calendar" "todo" "canvas" "email";
+    }
+    .grid-todo, .grid-canvas { min-height: unset; }
+  }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px 18px 8px;
+  }
+  .card h2 { font-size: 14px; margin: 0 0 12px; display: flex; align-items: center; justify-content: space-between; }
+  .card h2 .count { color: var(--muted); font-weight: 400; font-size: 12px; }
+
+  .day-header {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700;
+    color: var(--muted); margin-top: 16px; margin-bottom: 4px;
+  }
+  .day-header:first-child { margin-top: 0; }
+  .day-header.today {
+    display: inline-block; background: var(--accent); color: #fff;
+    padding: 3px 11px; border-radius: 999px; margin-bottom: 6px;
+  }
+
+  .item {
+    padding: 10px 0; border-top: 1px solid var(--border); font-size: 13px;
+  }
+  .item.today-item {
+    background: #eef2ff; border-radius: 8px; padding: 10px; border-top: none !important;
+  }
+  .item:first-child { border-top: none; }
+  .item.no-border { border-top: none; }
+  .item .title { font-weight: 600; margin-bottom: 2px; }
+  .item .meta { color: var(--muted); font-size: 12px; }
+  .item .snippet { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  .badge {
+    display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .03em; padding: 1px 7px; border-radius: 999px; margin-left: 6px; vertical-align: middle;
+  }
+  .badge.urgent { background: #fef2f2; color: var(--urgent); }
+  .badge.overdue { background: #fef2f2; color: var(--urgent); }
+  .badge.due-today { background: #fffbeb; color: var(--warn); }
+  .badge.reply { background: #eef2ff; color: var(--accent); }
+  .empty { color: var(--muted); font-size: 13px; padding: 14px 0; }
+
+  /* past calendar events: struck through and dimmed */
+  .item.past-event { opacity: .5; }
+  .item.past-event .title { text-decoration: line-through; }
+
+  /* email read/unread: unread gets a dot + bold, read is plain weight */
+  .item .title.email-read { font-weight: 400; color: var(--muted); }
+  .unread-dot {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent); margin-right: 7px; vertical-align: middle;
+  }
+
+  /* Fill whatever height the grid area gives the card (not the whole card) —
+     the add-form stays fixed size and only the item list scrolls. */
+  #todos { flex: 1; min-height: 0; overflow-y: auto; }
+  #assignments { flex: 1; min-height: 0; overflow-y: auto; }
+
+  .todo-form { display: flex; gap: 8px; margin-bottom: 10px; }
+  .todo-form input {
+    flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+    font-size: 13px; font-family: inherit;
+  }
+  .todo-form input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .todo-form button {
+    border: none; background: var(--accent); color: #fff; border-radius: 8px;
+    padding: 8px 14px; font-size: 13px; cursor: pointer;
+  }
+  .todo-form button:hover { opacity: .9; }
+  .todo-row {
+    display: flex; align-items: center; gap: 10px; padding: 8px 0;
+    border-top: 1px solid var(--border); font-size: 13px;
+  }
+  .todo-row:first-child { border-top: none; }
+  .todo-row.dragging { opacity: .4; }
+  .todo-handle {
+    cursor: grab; color: var(--muted); flex-shrink: 0; font-size: 14px;
+    line-height: 1; user-select: none;
+  }
+  .todo-handle:active { cursor: grabbing; }
+  .todo-row input[type="checkbox"] { width: 16px; height: 16px; flex-shrink: 0; cursor: pointer; }
+  .todo-text { flex: 1; word-break: break-word; }
+  .todo-row.todo-done .todo-text { text-decoration: line-through; color: var(--muted); }
+  .todo-delete {
+    border: none; background: none; color: var(--muted); font-size: 16px; line-height: 1;
+    cursor: pointer; padding: 2px 6px; border-radius: 6px; flex-shrink: 0;
+  }
+  .todo-delete:hover { background: #fef2f2; color: var(--urgent); }
+
+  .statuses {
+    margin-top: 22px; display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .status-chip {
+    font-size: 11px; border-radius: 999px; padding: 4px 10px; border: 1px solid var(--border);
+    background: var(--card); color: var(--muted); display: flex; align-items: center; gap: 5px;
+  }
+  .status-chip .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .dot.ok { background: var(--ok); }
+  .dot.error { background: var(--urgent); }
+  .dot.demo { background: #a5b4fc; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1 id="greeting">Dashboard</h1>
+      <div class="date" id="date"></div>
+    </div>
+    <div class="header-right">
+      <div class="weather-chip">
+        <select class="weather-chip-select" id="weather-location-select" onchange="onWeatherLocationChange(this)"></select>
+        <span id="weather-chip-body"></span>
+      </div>
+      <button class="refresh" id="refresh-btn" onclick="load()">Refresh</button>
+    </div>
+  </header>
+
+  <div class="briefing">
+    <div class="label">Today</div>
+    <div id="briefing-text">Loading…</div>
+  </div>
+
+  <div class="timing" id="timing"></div>
+
+  <div class="grid">
+    <div class="card grid-calendar">
+      <h2>Calendar <span class="count" id="events-count"></span></h2>
+      <div id="events"></div>
+    </div>
+    <div class="card todo-card grid-todo">
+      <h2>To-Do <span class="count" id="todos-count"></span></h2>
+      <form class="todo-form" onsubmit="return handleAddTodo(event)">
+        <input type="text" id="todo-input" placeholder="Add a task…" autocomplete="off">
+        <button type="submit">Add</button>
+      </form>
+      <div id="todos"></div>
+    </div>
+    <div class="card grid-canvas">
+      <h2>Canvas <span class="count" id="assignments-count"></span></h2>
+      <div id="assignments"></div>
+    </div>
+    <div class="card grid-email">
+      <h2>Email <span class="count" id="emails-count"></span></h2>
+      <div id="emails"></div>
+    </div>
+  </div>
+
+  <div class="statuses" id="statuses"></div>
+</div>
+
+<script>
+const SOURCE_LABELS = {
+  apple_calendar: "Apple Calendar", gmail: "Gmail", canvas: "Canvas", weather: "Weather",
+};
+
+const WEATHER_LOCATIONS = [
+  { label: "St. Louis, MO", value: "St. Louis, MO" },
+  { label: "New York, NY", value: "New York, NY" },
+  { label: "Short Hills, NJ", value: "Short Hills, NJ" },
+];
+let lastStatuses = [];
+
+function fmtTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+function fmtDay(iso) {
+  // Compare calendar dates directly (not a rounded hour-difference) so this
+  // always agrees with how renderEvents groups by day — a rounding-based
+  // version previously mislabeled a second, different day as "Today" too.
+  const d = new Date(iso);
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (d.toDateString() === today.toDateString()) return "Today";
+  if (d.toDateString() === tomorrow.toDateString()) return "Tomorrow";
+  return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+}
+function relTime(iso) {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.round(diffMs / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.round(hrs / 24)}d ago`;
+}
+
+function thisWeekOnly(events) {
+  // "This week" = today through 6 days from now (7 calendar days total,
+  // local time), dropping both the backend's -1-day spillover and anything
+  // further out than a week.
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  const end = new Date(start); end.setDate(end.getDate() + 7);
+  return events.filter(e => {
+    const d = new Date(e.start);
+    return d >= start && d < end;
+  });
+}
+
+function isPastEvent(e) {
+  const now = new Date();
+  if (e.all_day) {
+    const eventDate = new Date(e.start); eventDate.setHours(0, 0, 0, 0);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return eventDate < today;
+  }
+  return new Date(e.end || e.start) < now;
+}
+
+function renderEvents(allEvents) {
+  const el = document.getElementById("events");
+  const events = thisWeekOnly(allEvents);
+  document.getElementById("events-count").textContent = events.length;
+  if (!events.length) { el.innerHTML = '<div class="empty">Nothing scheduled this week.</div>'; return; }
+
+  // events arrive pre-sorted chronologically, so grouping in order of
+  // first-appearance naturally keeps the days in order too.
+  const days = new Map();
+  for (const e of events) {
+    const key = new Date(e.start).toDateString();
+    if (!days.has(key)) days.set(key, []);
+    days.get(key).push(e);
+  }
+
+  const todayKey = new Date().toDateString();
+  let html = "";
+  for (const dayEvents of days.values()) {
+    const isToday = new Date(dayEvents[0].start).toDateString() === todayKey;
+    const label = fmtDay(dayEvents[0].start);
+    html += `<div class="day-header ${isToday ? "today" : ""}">${label}</div>`;
+    html += dayEvents.map((e, i) => `
+      <div class="item ${isToday ? "today-item" : ""} ${i === 0 ? "no-border" : ""} ${isPastEvent(e) ? "past-event" : ""}">
+        <div class="title">${e.title}</div>
+        <div class="meta">${e.all_day ? "All day" : fmtTime(e.start)}
+          ${e.location ? " · " + e.location : ""} · ${SOURCE_LABELS[e.source] || e.source}</div>
+      </div>`).join("");
+  }
+  el.innerHTML = html;
+}
+
+function renderEmails(emails) {
+  const el = document.getElementById("emails");
+  document.getElementById("emails-count").textContent = emails.length;
+  if (!emails.length) { el.innerHTML = '<div class="empty">Inbox clear.</div>'; return; }
+  el.innerHTML = emails.slice(0, 8).map(e => `
+    <div class="item">
+      <div class="title ${e.unread ? "" : "email-read"}">
+        ${e.unread ? '<span class="unread-dot"></span>' : ""}${e.subject}
+        ${e.priority === "urgent" ? '<span class="badge urgent">Urgent</span>' : ""}
+        ${e.needs_reply && e.priority !== "urgent" ? '<span class="badge reply">Reply</span>' : ""}
+      </div>
+      <div class="meta">${e.sender} · ${relTime(e.received_at)} · ${e.unread ? "Unread" : "Read"} · ${SOURCE_LABELS[e.source] || e.source}</div>
+      <div class="snippet">${e.snippet || ""}</div>
+    </div>`).join("");
+}
+
+function renderAssignments(items) {
+  const el = document.getElementById("assignments");
+  document.getElementById("assignments-count").textContent = items.length;
+  if (!items.length) { el.innerHTML = '<div class="empty">No upcoming work.</div>'; return; }
+  const now = Date.now();
+  el.innerHTML = items.slice(0, 8).map(a => {
+    let badge = "";
+    if (a.due_at && !a.submitted) {
+      const due = new Date(a.due_at).getTime();
+      if (due < now) badge = '<span class="badge overdue">Overdue</span>';
+      else if (due - now < 86400000) badge = '<span class="badge due-today">Due today</span>';
+    }
+    return `
+    <div class="item">
+      <div class="title">${a.title} ${badge}</div>
+      <div class="meta">${a.course_name}${a.due_at ? " · due " + fmtDay(a.due_at) + " " + fmtTime(a.due_at) : ""}
+        ${a.submitted ? " · submitted" : ""}</div>
+    </div>`;
+  }).join("");
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function renderTodos(todos) {
+  const el = document.getElementById("todos");
+  document.getElementById("todos-count").textContent = todos.length;
+  if (!todos.length) { el.innerHTML = '<div class="empty">Nothing on your list.</div>'; return; }
+  el.innerHTML = todos.map(t => `
+    <div class="todo-row ${t.done ? "todo-done" : ""}" data-id="${t.id}"
+         ondragover="onTodoDragOver(event)" ondrop="event.preventDefault()">
+      <span class="todo-handle" draggable="true"
+            ondragstart="onTodoDragStart(event)" ondragend="onTodoDragEnd(event)">&#10021;</span>
+      <input type="checkbox" ${t.done ? "checked" : ""} onchange="toggleTodo('${t.id}', this.checked)">
+      <span class="todo-text">${escapeHtml(t.text)}</span>
+      <button class="todo-delete" title="Delete" onclick="deleteTodo('${t.id}')">&times;</button>
+    </div>`).join("");
+}
+
+async function loadTodos() {
+  const res = await fetch("/api/todos", { cache: "no-store" });
+  const todos = await res.json();
+  renderTodos(todos);
+}
+
+let dragSrcId = null;
+
+function onTodoDragStart(event) {
+  const row = event.target.closest(".todo-row");
+  if (!row) return;
+  dragSrcId = row.dataset.id;
+  row.classList.add("dragging");
+  event.dataTransfer.effectAllowed = "move";
+}
+
+function onTodoDragOver(event) {
+  event.preventDefault();
+  if (!dragSrcId) return;
+  const targetRow = event.currentTarget;
+  const srcRow = document.querySelector(`.todo-row[data-id="${dragSrcId}"]`);
+  if (!srcRow || srcRow === targetRow) return;
+  const container = targetRow.parentElement;
+  const rect = targetRow.getBoundingClientRect();
+  const before = (event.clientY - rect.top) < rect.height / 2;
+  container.insertBefore(srcRow, before ? targetRow : targetRow.nextSibling);
+}
+
+async function onTodoDragEnd(event) {
+  const row = event.target.closest(".todo-row");
+  if (row) row.classList.remove("dragging");
+  dragSrcId = null;
+  const order = Array.from(document.querySelectorAll("#todos .todo-row"))
+    .map(r => r.dataset.id);
+  if (!order.length) return;
+  await fetch("/api/todos/reorder", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ order }),
+  });
+}
+
+async function handleAddTodo(event) {
+  event.preventDefault();
+  const input = document.getElementById("todo-input");
+  const text = input.value.trim();
+  if (!text) return false;
+  input.value = "";
+  await fetch("/api/todos", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+  await loadTodos();
+  return false;
+}
+
+async function toggleTodo(id, done) {
+  await fetch(`/api/todos/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ done }),
+  });
+  await loadTodos();
+}
+
+async function deleteTodo(id) {
+  await fetch(`/api/todos/${id}`, { method: "DELETE" });
+  await loadTodos();
+}
+
+function renderTiming(result) {
+  const speedup = (result.sequential_estimate_ms > 0)
+    ? (result.sequential_estimate_ms / result.total_duration_ms).toFixed(2)
+    : "1.00";
+  const n = (result.statuses || []).length;
+  document.getElementById("timing").innerHTML = `
+    <span>${n} agent${n === 1 ? "" : "s"} ran in parallel: <b>${Math.round(result.total_duration_ms)}ms</b>
+    (would've been <b>${Math.round(result.sequential_estimate_ms)}ms</b> one at a time)</span>
+    <span class="speedup">${speedup}x faster</span>
+  `;
+}
+
+function renderWeather(w) {
+  const body = document.getElementById("weather-chip-body");
+  if (!w) { body.textContent = "Weather unavailable"; return; }
+  const range = (w.high_f != null && w.low_f != null)
+    ? ` <span class="range">H:${Math.round(w.high_f)}° L:${Math.round(w.low_f)}°</span>` : "";
+  body.innerHTML = `
+    <span class="icon">${w.icon || ""}</span>
+    <span class="temp">${Math.round(w.temperature_f)}°F</span>${range}
+  `;
+}
+
+function getSelectedWeatherLocation() {
+  return localStorage.getItem("weatherLocation") || WEATHER_LOCATIONS[0].value;
+}
+
+function initWeatherSelect() {
+  const select = document.getElementById("weather-location-select");
+  select.innerHTML = WEATHER_LOCATIONS.map(loc =>
+    `<option value="${escapeHtml(loc.value)}">${escapeHtml(loc.label)}</option>`).join("");
+  select.value = getSelectedWeatherLocation();
+}
+
+function onWeatherLocationChange(select) {
+  localStorage.setItem("weatherLocation", select.value);
+  fetchWeather(select.value);
+}
+
+async function fetchWeather(location) {
+  const body = document.getElementById("weather-chip-body");
+  body.textContent = "Loading…";
+  try {
+    const res = await fetch(`/api/weather?location=${encodeURIComponent(location)}`, { cache: "no-store" });
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const data = await res.json();
+    renderWeather(data.weather);
+    if (data.status) {
+      lastStatuses = lastStatuses.filter(s => s.source !== "weather").concat([data.status]);
+      renderStatuses(lastStatuses);
+    }
+  } catch (err) {
+    body.textContent = "Couldn't load weather";
+    console.error("Weather fetch failed:", err);
+  }
+}
+
+function renderStatuses(statuses) {
+  document.getElementById("statuses").innerHTML = statuses.map(s => {
+    const dotClass = !s.ok ? "error" : (s.demo ? "demo" : "ok");
+    const label = SOURCE_LABELS[s.source] || s.source;
+    const detail = !s.ok ? (s.error || "error") : (s.demo ? "demo data" : `${s.item_count} items`);
+    return `<div class="status-chip"><span class="dot ${dotClass}"></span>${label} · ${detail} · ${Math.round(s.duration_ms)}ms</div>`;
+  }).join("");
+}
+
+async function load() {
+  const btn = document.getElementById("refresh-btn");
+  btn.disabled = true;
+  btn.textContent = "Refreshing…";
+  document.getElementById("briefing-text").textContent = "Loading…";
+
+  try {
+    const res = await fetch("/api/dashboard", { cache: "no-store" });
+    if (!res.ok) {
+      throw new Error(`Server returned ${res.status}`);
+    }
+    const result = await res.json();
+
+    const hour = new Date().getHours();
+    document.getElementById("greeting").textContent =
+      hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+    document.getElementById("date").textContent = new Date().toLocaleDateString([], {
+      weekday: "long", month: "long", day: "numeric",
+    });
+
+    document.getElementById("briefing-text").textContent = result.briefing || "";
+    renderTiming(result);
+    renderEvents(result.events || []);
+    renderEmails(result.emails || []);
+    renderAssignments(result.assignments || []);
+    lastStatuses = result.statuses || [];
+    renderStatuses(lastStatuses);
+  } catch (err) {
+    // Surface failures instead of silently doing nothing — this is almost
+    // always either the server not running, or the port already in use by
+    // another instance.
+    document.getElementById("briefing-text").textContent =
+      "Couldn't reach the dashboard server. Is it still running in Terminal? (" + err.message + ")";
+    console.error("Dashboard refresh failed:", err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Refresh";
+  }
+
+  // Both independent of the dashboard fetch above (separate endpoints, own
+  // failure modes) — a dashboard hiccup shouldn't hide your to-dos or weather.
+  try {
+    await loadTodos();
+  } catch (err) {
+    console.error("Failed to load to-dos:", err);
+  }
+  try {
+    await fetchWeather(getSelectedWeatherLocation());
+  } catch (err) {
+    console.error("Failed to load weather:", err);
+  }
+}
+
+initWeatherSelect();
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# Secrets — never commit real credentials
+.env
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Local data (auto-created at runtime)
+data/todos.json
+
+# OS
+.DS_Store
