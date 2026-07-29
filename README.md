@@ -1,25 +1,16 @@
 # Personal Dashboard
 
-A daily dashboard that pulls from Apple Calendar, Gmail, Canvas, and the
-weather, run through independent agents **in parallel**, with an
+A daily dashboard that pulls from Apple Calendar, Gmail, Canvas, and local
+weather — run through independent agents **in parallel**, with an
 AI-written daily briefing on top.
 
 ## Why this exists
 
-I've tried a lot of different productivity apps, but none of them had the
-exact combination of features I wanted, so I decided to build a custom
-dashboard instead. It also gave me a reason to experiment with AI agents
-and prompting.
-
 Most integrations like this fetch each source one after another. This one
 runs every connector concurrently on a thread pool and measures the actual
-wall-clock difference, showing in real numbers how much faster parallel
-execution is than doing it sequentially. That timing comparison lives at
-the top of the page, not just in a README claim.
-
-## How this was built
-
-Built with Claude, not hand-coded. I designed the project and directed the implementation, debugging by describing what was wrong rather than fixing it myself. I'm including it for what that took: learning how OAuth differs across Apple, Gmail, and Canvas, and prompting precisely enough to get a working, tested app out of it.
+wall-clock difference — the dashboard shows you, in real numbers, how much
+faster parallel execution is than doing it sequentially. That timing
+comparison lives at the top of the page, not just in a README claim.
 
 ## Quick start (zero config)
 
@@ -64,10 +55,12 @@ auth in 2025, so this won't work for a school/work Google account.
    `CANVAS_ACCESS_TOKEN` in `.env`.
 
 ### Weather
-Via Open-Meteo — no API key or account needed at all, the only integration
-in the project with zero setup.
-1. Set `WEATHER_LOCATION` in `.env` to a city (e.g. `"St. Louis, MO"`) or a
-   `"lat,lon"` pair to skip geocoding.
+The only integration here that needs zero setup — Open-Meteo has no API key
+or account at all.
+1. Set `WEATHER_LOCATION` in `.env` to a city (e.g. `St. Louis, MO`) or a
+   `lat,lon` pair to skip the geocoding lookup. This is just the default —
+   the dashboard's weather card also has a dropdown (St. Louis, NYC, Short
+   Hills NJ) that overrides it per-request via `GET /api/weather?location=`.
 
 ### AI daily briefing (optional)
 Powers the short narrative summary at the top of the page ("Today: 3 events,
@@ -84,20 +77,24 @@ app/
     apple_calendar.py    CalDAV (caldav.icloud.com)
     gmail_imap.py          IMAP (imap.gmail.com)
     canvas_lms.py            REST API (personal access token)
-    weather.py                 Open-Meteo (geocoding + forecast, no key needed)
+    weather.py               Open-Meteo geocoding + forecast (no API key)
   orchestrator.py     runs every active connector concurrently via asyncio.to_thread,
                        measures wall-clock time vs. the summed sequential estimate
   briefing.py         synthesizes the daily narrative (AI if configured, rule-based fallback)
   todo_store.py        file-backed to-do persistence (data/todos.json) — survives closing
                         the tab/browser or restarting the server, not just page memory
   demo_data.py         synthetic data + simulated latency for zero-config demo mode
-  main.py              FastAPI app: GET /api/dashboard, CRUD /api/todos, serves static/index.html
-static/index.html    single-file frontend, polls /api/dashboard and renders everything —
-                      calendar events are grouped by day, filtered to the current week,
-                      with "Today" visually highlighted and past events struck through;
-                      emails show read/unread; the to-do list is its own editable section
+  main.py              FastAPI app: GET /api/dashboard, GET /api/weather, CRUD /api/todos,
+                       serves static/index.html
+static/index.html    single-file frontend, two independent columns (not a synced grid, so
+                      the right column's cards stack at their own height instead of
+                      stretching to match Calendar's) — left: Calendar + Email; right:
+                      To-Do (capped height, drag-to-reorder), Weather (with a location
+                      dropdown), Canvas. Calendar events are grouped by day, filtered to
+                      the current week, with "Today" highlighted and past events struck
+                      through; emails show read/unread
 tests/                47 tests covering every connector's real-mode logic (mocked
-                      HTTP/CalDAV/IMAP) and the to-do API/store — no live credentials needed
+                      HTTP/CalDAV/IMAP) and the to-do/weather API — no live credentials needed
 data/
   todos.json            auto-created on first use — your to-do list lives here
 ```
