@@ -1,20 +1,25 @@
 # Personal Dashboard
 
 A daily dashboard that pulls from Apple Calendar, Gmail, Canvas, and the
-weather — run through independent agents **in parallel**, with an
+weather, run through independent agents **in parallel**, with an
 AI-written daily briefing on top.
-
-## How this was built
-
-Built with Claude, not hand-coded. I designed the project and directed the implementation, debugging by describing what was wrong rather than fixing it myself. I'm including it for what that took: learning how OAuth differs across Apple, Gmail, Canvas, and Microsoft, and prompting precisely enough to get a working, tested app out of it.
 
 ## Why this exists
 
+I've tried a lot of different productivity apps, but none of them had the
+exact combination of features I wanted, so I decided to build a custom
+dashboard instead. It also gave me a reason to experiment with AI agents
+and prompting.
+
 Most integrations like this fetch each source one after another. This one
 runs every connector concurrently on a thread pool and measures the actual
-wall-clock difference — the dashboard shows you, in real numbers, how much
-faster parallel execution is than doing it sequentially. That timing
-comparison lives at the top of the page, not just in a README claim.
+wall-clock difference, showing in real numbers how much faster parallel
+execution is than doing it sequentially. That timing comparison lives at
+the top of the page, not just in a README claim.
+
+## How this was built
+
+Built with Claude, not hand-coded. I designed the project and directed the implementation, debugging by describing what was wrong rather than fixing it myself. I'm including it for what that took: learning how OAuth differs across Apple, Gmail, and Canvas, and prompting precisely enough to get a working, tested app out of it.
 
 ## Quick start (zero config)
 
