@@ -1,7 +1,7 @@
 # Personal Dashboard
 
 A daily dashboard that pulls from Apple Calendar, Gmail, Canvas, and local
-weather — run through independent agents **in parallel**, with an
+weather, run through independent agents **in parallel**, with an
 AI-written daily briefing on top.
 
 ## Why this exists
