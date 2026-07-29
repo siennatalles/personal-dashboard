@@ -6,6 +6,15 @@ AI-written daily briefing on top.
 
 ## Why this exists
 
+I've tried a lot of different productivity apps, but none of them had the
+exact combination of features I wanted, so I decided to build a custom
+dashboard instead — one that pulls from the specific sources I actually
+check every day, laid out the way I want to see them, rather than adapting
+my routine to whatever an existing app supported. It was also a chance to
+get hands-on experience with AI agents and prompting, and with wiring up
+and managing real API keys (Apple, Gmail, Canvas, Anthropic) across
+different auth schemes rather than just reading about how they work.
+
 Most integrations like this fetch each source one after another. This one
 runs every connector concurrently on a thread pool and measures the actual
 wall-clock difference — the dashboard shows you, in real numbers, how much
